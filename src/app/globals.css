@@ -1,26 +1,80 @@
+@import 'leaflet/dist/leaflet.css';
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-family-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  background: #fff;
 }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f8fafc; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #16a34a; }
+
+/* ── Pill CTA button ── */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 13px 20px 13px 26px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.btn-pill:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -4px rgba(22,163,74,0.35);
+}
+.btn-pill .arrow-circle {
+  width: 34px; height: 34px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.btn-pill .arrow-circle svg { color: #16a34a; }
+
+
+/* ── Section label ── */
+.section-label {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #16a34a;
+  margin-bottom: 16px;
+}
+
+/* ── Feature card ── */
+.feature-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+
+/* ── Badge locked ── */
+.badge-locked { filter: grayscale(1) opacity(0.4); }
+
+/* ── Leaflet ── */
+.leaflet-container { width: 100%; height: 100%; z-index: 1; }
+
