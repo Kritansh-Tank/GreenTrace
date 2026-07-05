@@ -32,7 +32,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center">
               <Leaf className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900">CarbonSense</span>
+            <span className="font-bold text-lg text-gray-900">GreenTrace</span>
           </Link>
 
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1">Welcome back</h1>
@@ -87,7 +87,7 @@ export default function LoginPage() {
           <blockquote className="text-white text-2xl font-bold leading-snug mb-3">
             "Small daily actions,<br />compounded over time,<br />change the world."
           </blockquote>
-          <p className="text-green-200 text-sm">— CarbonSense</p>
+          <p className="text-green-200 text-sm">— GreenTrace</p>
         </div>
       </div>
     </div>

@@ -94,6 +94,27 @@ export interface InsightTip {
   category: string
 }
 
+/** A single step in the agent-generated Action Plan. */
+export interface ActionPlanStep {
+  step: number
+  week: number
+  title: string
+  category: string
+  saving_kg: number
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  detail: string
+  cumulative_saving_kg: number
+  completed?: boolean
+}
+
+/** A single step in the agent's ReAct reasoning trace (for UI transparency). */
+export interface AgentTraceStep {
+  type: 'thought' | 'tool_call' | 'tool_result' | 'answer'
+  content: string
+  tool_name?: string
+  tool_args?: Record<string, unknown>
+}
+
 export interface RouteOption {
   mode: string
   distance_km: number

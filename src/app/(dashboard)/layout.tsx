@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center">
               <Leaf className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-sm text-gray-900 hidden sm:block">CarbonSense</span>
+            <span className="font-bold text-sm text-gray-900 hidden sm:block">GreenTrace</span>
           </Link>
 
           {/* Center nav */}

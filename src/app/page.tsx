@@ -2,13 +2,13 @@ import Link from 'next/link'
 import { Leaf, ArrowRight, BarChart3, Lightbulb, Target, Map, Heart, TrendingDown, Zap, Car, Train, Bus } from 'lucide-react'
 
 export const metadata = {
-  title: 'CarbonSense — Know Your Footprint. Change Your Future.',
-  description: 'Track, understand, and reduce your personal carbon footprint with AI-powered insights, real-time route planning, and verified offset projects.',
+  title: 'GreenTrace — Know Your Footprint. Change Your Future.',
+  description: 'Track, understand, and reduce your personal carbon footprint with an AI agent that reasons, plans, and acts on your behalf.',
 }
 
 const features = [
   { icon: BarChart3, label: 'Carbon Calculator', desc: 'Multi-domain tracking across travel, food, energy, shopping and commute — built on IPCC AR6 emission factors.' },
-  { icon: Lightbulb, label: 'AI Insights', desc: 'EcoCoach analyses your real data and generates 5 personalised, ranked reduction strategies via Groq Llama 3.' },
+  { icon: Lightbulb, label: 'AI Agent Insights', desc: 'EcoAgent analyses your real data using a ReAct reasoning loop and generates a ranked, personalised Action Plan via Groq Llama 3.1 8B.' },
   { icon: Target, label: 'Goals & Badges', desc: 'Set monthly reduction targets, track progress, and unlock achievement badges as you hit milestones.' },
   { icon: Map, label: 'Eco Route Planner', desc: 'Compare CO₂ across Car, EV, Bus, Train and Flight for any route with live mapping via OpenRouteService.' },
   { icon: Heart, label: 'Carbon Offset', desc: 'Donate to verified reforestation and solar projects via Stripe Checkout to offset what you cannot eliminate.' },
@@ -33,7 +33,7 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center">
               <Leaf className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-base text-gray-900">CarbonSense</span>
+            <span className="font-bold text-base text-gray-900">GreenTrace</span>
           </Link>
 
           <div className="flex-1 flex items-center justify-center gap-6">
@@ -135,15 +135,15 @@ export default function LandingPage() {
         <div className="bg-gray-950 rounded-3xl overflow-hidden p-10 sm:p-14 lg:p-16">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
             <div>
-              <span className="section-label !text-green-400">AI-Powered Insights</span>
+              <span className="section-label !text-green-400">AI-Powered Agentic Insights</span>
               <h2 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-5 mt-2">
-                Meet your personal<br />EcoCoach
+                Meet your personal<br />EcoAgent
               </h2>
               <p className="text-gray-400 text-lg leading-relaxed mb-8">
-                EcoCoach analyses your real footprint data and generates five personalised, ranked reduction strategies — sorted by impact. Ask it anything in plain language.
+                EcoAgent uses a ReAct reasoning loop — it thinks, selects tools, observes results, and plans — generating a personalised Action Plan ranked by CO₂ impact. Ask it anything in plain language.
               </p>
               <ul className="space-y-3 mb-10">
-                {['Ranked by CO₂ saving potential', 'Tailored to your actual habits', 'Chat in plain English', 'Powered by Groq Llama 3 70B'].map(pt => (
+                {['Ranked by CO₂ saving potential', 'Tailored to your actual habits', 'Multi-step ReAct agent loop', 'Chat in plain English', 'Powered by Groq Llama 3.1 8B'].map(pt => (
                   <li key={pt} className="flex items-center gap-3 text-gray-300 text-sm">
                     <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -153,7 +153,7 @@ export default function LandingPage() {
                 ))}
               </ul>
               <Link href="/register" className="btn-pill">
-                Try EcoCoach free
+                Try EcoAgent free
                 <span className="arrow-circle">
                   <ArrowRight className="w-4 h-4" />
                 </span>
@@ -167,18 +167,18 @@ export default function LandingPage() {
                   <Leaf className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">EcoCoach</div>
+                  <div className="text-sm font-semibold text-white">EcoAgent</div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="text-xs text-gray-500">Llama 3 70B</span>
+                    <span className="text-xs text-gray-500">Groq Llama 3.1 8B</span>
                   </div>
                 </div>
               </div>
               {[
                 { role: 'user', text: 'How can I reduce my food emissions?' },
-                { role: 'ai', text: 'Your beef consumption is your biggest food emission at 34 kg/month. Reducing to 1 serving/week saves ~22 kg CO₂ — the highest-impact change you can make.' },
+                { role: 'ai', text: '[Tool: analyze_footprint] Your food category is 34 kg/month — your highest emitter. Reducing beef to 1 serving/week saves ~22 kg CO₂. I have added this to your Action Plan as Step 1.' },
                 { role: 'user', text: 'What about my commute?' },
-                { role: 'ai', text: 'Switching to Metro 3 days/week saves ~18 kg CO₂/month with minimal lifestyle change. That is your second highest opportunity.' },
+                { role: 'ai', text: '[Tool: get_transport_alternatives] Switching to Metro 3 days/week saves ~18 kg CO₂/month. Added as Step 2 — your Action Plan is ready.' },
               ].map((m, i) => (
                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user'
@@ -229,7 +229,7 @@ export default function LandingPage() {
                 Every journey,<br />a greener choice
               </h2>
               <p className="text-gray-500 text-lg leading-relaxed mb-8">
-                Search any origin and destination. CarbonSense fetches live route data and instantly shows you the CO₂ cost of every transport mode — so you choose consciously.
+                CarbonSense fetches live route data and instantly shows you the CO₂ cost of every transport mode — so you choose consciously.
               </p>
               <Link href="/register" className="btn-pill">
                 Plan a route
@@ -274,7 +274,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center">
                 <Leaf className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-lg text-white">CarbonSense</span>
+              <span className="font-bold text-lg text-white">GreenTrace</span>
             </div>
             <p className="text-gray-500 text-sm">
               Emission factors from IPCC AR6 & EPA 2023
@@ -285,7 +285,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-white mt-8 pt-6 text-xs text-gray-600 text-center">
-            © 2026 CarbonSense
+            © 2026 GreenTrace
           </div>
         </div>
       </div>

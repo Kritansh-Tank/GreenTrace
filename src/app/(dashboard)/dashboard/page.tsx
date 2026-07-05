@@ -100,7 +100,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} />
               <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} unit=" kg" />
-              <Tooltip formatter={(v: number) => [`${v.toFixed(1)} kg`, '']} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+              <Tooltip formatter={(v) => [`${Number(v ?? 0).toFixed(1)} kg`, '']} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
               <Line type="monotone" dataKey="total" stroke="#059669" strokeWidth={2.5} dot={{ r: 4, fill: '#059669' }} name="Total" />
             </LineChart>
           </ResponsiveContainer>
@@ -115,7 +115,7 @@ export default function DashboardPage() {
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Legend formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
-                <Tooltip formatter={(v: number) => [`${v.toFixed(1)} kg`, '']} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                <Tooltip formatter={(v) => [`${Number(v ?? 0).toFixed(1)} kg`, '']} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
               </PieChart>
             </ResponsiveContainer>
           ) : <p className="text-slate-400 text-sm text-center py-10">No data</p>}
