@@ -157,6 +157,11 @@ Commute: mode=${commuteMode}, km_per_day=${kmPerDay}. Energy: electricity_kwh=${
   let iterations = 0
   let finalAnswer = ''
 
+  // Accumulates actions from domain tools so calculate_action_plan always
+  // gets the full list — the LLM tends to only pass 1-2 actions otherwise.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const collectedActions: any[] = []
+
   // ── ReAct Loop ──────────────────────────────────────────────────────────────
   while (iterations < MAX_ITERATIONS) {
     iterations++
@@ -199,8 +204,56 @@ Commute: mode=${commuteMode}, km_per_day=${kmPerDay}. Energy: electricity_kwh=${
         // OBSERVE: Execute the tool
         let toolResult: unknown
         try {
+          // For calculate_action_plan: inject all collected actions automatically
+          // so we don't depend on the LLM correctly assembling them.
+          if (toolName === 'calculate_action_plan') {
+            if (collectedActions.length > 0) {
+              toolArgs = { ...toolArgs, actions: collectedActions, goal_kg: goalKg }
+            }
+          }
+
           toolResult = dispatchTool(toolName, toolArgs)
-          // Save action plan data so we can return it directly
+
+          // Collect actions from each domain tool for auto-injection above
+          if (toolName === 'get_transport_alternatives') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const r = toolResult as any
+            for (const alt of (r.alternatives ?? [])) {
+              collectedActions.push({
+                title: `Switch to ${alt.mode}`,
+                category: 'transport',
+                saving_kg: alt.monthly_saving_kg,
+                difficulty: alt.monthly_saving_kg > 50 ? 'Hard' : alt.monthly_saving_kg > 20 ? 'Medium' : 'Easy',
+                detail: alt.recommendation,
+              })
+            }
+          }
+          if (toolName === 'get_food_alternatives') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const r = toolResult as any
+            for (const sw of (r.swaps ?? [])) {
+              collectedActions.push({
+                title: sw.swap,
+                category: 'food',
+                saving_kg: sw.monthly_saving_kg,
+                difficulty: sw.difficulty,
+                detail: sw.swap,
+              })
+            }
+          }
+          if (toolName === 'get_energy_tips') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const r = toolResult as any
+            for (const tip of (r.tips ?? [])) {
+              collectedActions.push({
+                title: tip.tip,
+                category: 'energy',
+                saving_kg: tip.monthly_saving_kg,
+                difficulty: tip.difficulty,
+                detail: tip.tip,
+              })
+            }
+          }
           if (toolName === 'calculate_action_plan') {
             actionPlanData = toolResult as typeof actionPlanData
           }

@@ -105,7 +105,7 @@ User Browser
           │                              │
           ▼                              ▼
     Supabase DB                   Groq Cloud API
-   (PostgreSQL + RLS)         (Kimi K2 — tool-calling)
+   (PostgreSQL + RLS)         (Llama 3.1 8B Instant)
 ```
 
 ### Agent Flow (step by step)
@@ -115,9 +115,10 @@ User Browser
 | 1 | Receives user's CO₂ breakdown + goal | `/api/insights` POST |
 | 2 | Calls `analyze_footprint` tool | `src/lib/agent/tools.ts` |
 | 3 | Reads priority categories from observation | ReAct loop in `ecoagent.ts` |
-| 4 | Calls 1–2 domain tools (transport / food / energy) | Same file |
-| 5 | Calls `calculate_action_plan` to synthesise | Returns week-by-week plan |
+| 4 | Calls **all 3** domain tools (transport + food + energy) | Code auto-collects all results |
+| 5 | Calls `calculate_action_plan` — code injects all collected actions | Returns week-by-week plan |
 | 6 | Produces final JSON (tips + action plan + trace) | UI renders 3 tabs |
+| 7 | Result cached in `insights_cache` (Supabase) | Instant on revisit — no re-run |
 
 ---
 
@@ -140,9 +141,10 @@ User Browser
 | 🔌 **MCP Server** | `/api/mcp` exposes GreenTrace as a standardised tool server |
 | 🧮 **Carbon Calculator** | Multi-domain footprint tracking (Travel, Food, Energy, Shopping, Commute) |
 | 📊 **Dashboard** | Monthly trend charts, category breakdown, comparison vs global averages |
-| 📋 **Action Plan** | Week-by-week step plan with completion checkboxes, persisted to localStorage |
+| 📋 **Action Plan** | Week-by-week step plan with completion checkboxes, persisted to Supabase |
 | 🧠 **Agent Trace** | Transparent view of agent reasoning steps — builds user trust |
-| 🎯 **Goals & Badges** | Monthly reduction targets and achievement badges |
+| ⚡ **Insights Cache** | Agent results cached in Supabase per entry — instant on revisit, no re-run |
+| 🎯 **Goals & Roadmap** | Monthly targets, achievement badges, and AI-powered "How to reach goal" roadmap |
 | 🗺️ **Eco Route Planner** | Compare CO₂ across Car, EV, Bus, Train, Flight with live map |
 | 💚 **Carbon Offset** | Donate to verified projects via Stripe Checkout |
 | 🔐 **Authentication** | Email/password auth with Supabase + Row Level Security |
@@ -152,8 +154,8 @@ User Browser
 ## 🛠️ Tech Stack
 
 - **Framework** — Next.js 16 (App Router, Turbopack)
-- **AI Agent** — Groq Cloud API · Qwen3 32B (`qwen/qwen3-32b`) for tool-calling
-- **Agent Pattern** — ReAct (Reason + Act) loop, implemented in TypeScript
+- **AI Agent** — Groq Cloud API · `llama-3.1-8b-instant` — fast, tool-calling, 30k TPM free tier
+- **Agent Pattern** — ReAct (Reason + Act) loop with automatic retry on rate limits, implemented in TypeScript
 - **MCP** — Custom JSON-RPC 2.0 server at `/api/mcp`
 - **Styling** — Tailwind CSS v4 + Lucide React icons
 - **Auth & Database** — Supabase (PostgreSQL + Row Level Security)
@@ -178,11 +180,12 @@ greentrace/
 │   │   │   ├── travel/         # Eco route planner + map
 │   │   │   └── offset/         # Stripe carbon offset donations
 │   │   └── api/
-│   │       ├── insights/       # EcoAgent endpoint (ReAct loop)
+│   │       ├── insights/       # EcoAgent endpoint (ReAct loop + cache check)
+│   │       ├── insights-cache/ # Lightweight cache read for Goals page
 │   │       ├── mcp/            # MCP Server (JSON-RPC 2.0)
 │   │       ├── calculator/     # CO₂ calculation + save to DB
 │   │       ├── history/        # Fetch footprint entries
-│   │       ├── health/         # Health check + Supabase keepalive
+│   │       ├── health/         # Health check + Supabase keepalive (GET + HEAD)
 │   │       └── stripe/         # Stripe checkout session
 │   └── lib/
 │       ├── agent/
@@ -248,6 +251,7 @@ This creates all tables with RLS policies:
 - `goals` — monthly reduction targets
 - `user_badges` — unlocked achievements
 - `carbon_offsets` — Stripe payment records
+- `insights_cache` — EcoAgent results cached per entry (avoids re-running the agent on every visit)
 
 ### 4. Run Locally
 
