@@ -24,6 +24,38 @@ import { buildGroqTools, dispatchTool } from '@/lib/agent/tools'
 import type { CO2Breakdown } from '@/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Retry helper
+// Groq free tier: 6,000 TPM. The agent may hit 429 mid-loop.
+// This wrapper parses the "try again in Xs" hint from the error message
+// and waits that long before retrying — up to 2 retries per call.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function groqWithRetry(params: Parameters<typeof groq.chat.completions.create>[0]): Promise<any> {
+  const MAX_RETRIES = 2
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await groq.chat.completions.create(params)
+    } catch (e: unknown) {
+      lastError = e
+      const msg = e instanceof Error ? e.message : String(e)
+      // Only retry on rate-limit errors
+      if (!msg.includes('429') && !msg.includes('rate_limit_exceeded')) throw e
+
+      // Parse "Please try again in 18.93s" from Groq's error message
+      const match = msg.match(/try again in ([\d.]+)s/i)
+      const waitMs = match ? Math.ceil(parseFloat(match[1]) * 1000) + 500 : 20000
+
+      console.log(`[EcoAgent] Rate limited. Waiting ${waitMs}ms then retrying (attempt ${attempt + 1}/${MAX_RETRIES})...`)
+      await new Promise(r => setTimeout(r, waitMs))
+    }
+  }
+  throw lastError
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -69,18 +101,19 @@ export interface AgentResult {
 // a structured Action Plan rather than free-form text.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are EcoAgent, a carbon footprint reduction AI agent using ReAct (Reasoning + Acting).
+const SYSTEM_PROMPT = `You are EcoAgent, a carbon footprint reduction AI agent.
 
-Tool order:
-1. analyze_footprint  — ALWAYS call first.
-2. get_transport_alternatives — if commute/travel is top priority.
-3. get_food_alternatives — if food is top priority.
-4. get_energy_tips — if energy is top priority.
-5. calculate_action_plan — ALWAYS call last.
+You MUST follow this exact tool sequence every time — no exceptions:
+1. analyze_footprint      — call FIRST with the user's CO₂ numbers.
+2. get_transport_alternatives — call ALWAYS with current_mode and km_per_day.
+3. get_food_alternatives      — call ALWAYS (pass 0 for any unknown fields).
+4. get_energy_tips            — call ALWAYS with electricity_kwh.
+5. calculate_action_plan      — call LAST. Pass ALL actions from steps 2-4 combined.
 
-Rules: Call analyze_footprint first. Call calculate_action_plan last. Call at most 2 domain tools between them. Never invent numbers.
-
-After calculate_action_plan, respond with ONLY this JSON (no markdown):
+Rules:
+- You MUST call tools 1 through 5 in order. Never skip steps 2, 3, or 4.
+- Only use numbers from tool results — never invent data.
+- After step 5, respond with ONLY this JSON (no markdown fences):
 {
   "tips": [{"title":"...","explanation":"...","saving_kg":0,"difficulty":"Easy|Medium|Hard","category":"..."}],
   "action_plan_summary": "..."
@@ -98,27 +131,21 @@ export async function runEcoAgent(
   goalKg: number,
 ): Promise<AgentResult> {
 
-  const MAX_ITERATIONS = 4  // Reduced to save tokens on free-tier TPM limits
+  const MAX_ITERATIONS = 6  // analyze + transport + food + energy + calculate + final answer
   const trace: AgentTraceStep[] = []
   let actionPlanData: ReturnType<typeof import('@/lib/agent/tools').dispatchTool> | null = null
 
   // Build Groq tool schemas
   const tools = buildGroqTools()
 
-  // Initial user message — provides all the raw context the agent needs
-  const userMessage = `Please analyse my carbon footprint and create an Action Plan.
+  // Compact user message with key fields the domain tools need as arguments
+  const commuteMode   = (formData?.commute_mode   as string) ?? 'car_petrol'
+  const kmPerDay      = (formData?.km_per_day      as number) ?? 20
+  const electricityKwh= (formData?.electricity_kwh as number) ?? 200
 
-My monthly CO₂ breakdown:
-- Travel:   ${breakdown.travel_kg ?? 0} kg
-- Food:     ${breakdown.food_kg ?? 0} kg
-- Energy:   ${breakdown.energy_kg ?? 0} kg
-- Shopping: ${breakdown.shopping_kg ?? 0} kg
-- Commute:  ${breakdown.commute_kg ?? 0} kg
-- TOTAL:    ${breakdown.total_kg} kg/month
-${goalKg > 0 ? `\nMy monthly reduction goal: ${goalKg} kg` : ''}
-
-Additional context (use for tool arguments):
-${JSON.stringify(formData, null, 2)}`
+  const userMessage = `Analyse my carbon footprint and create an Action Plan.
+Monthly CO₂: Travel ${breakdown.travel_kg ?? 0}kg, Food ${breakdown.food_kg ?? 0}kg, Energy ${breakdown.energy_kg ?? 0}kg, Shopping ${breakdown.shopping_kg ?? 0}kg, Commute ${breakdown.commute_kg ?? 0}kg. Total: ${breakdown.total_kg}kg/month.${goalKg > 0 ? ` Goal: ${goalKg}kg reduction.` : ''}
+Commute: mode=${commuteMode}, km_per_day=${kmPerDay}. Energy: electricity_kwh=${electricityKwh}.`
 
   // Conversation history — grows with each iteration
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,14 +161,14 @@ ${JSON.stringify(formData, null, 2)}`
   while (iterations < MAX_ITERATIONS) {
     iterations++
 
-    // THINK: Call LLM — allow it to either use a tool or give a final answer
-    const response = await groq.chat.completions.create({
+    // THINK: Call LLM with automatic retry on 429
+    const response = await groqWithRetry({
       model: AGENT_MODEL,
       messages,
       tools,
       tool_choice: 'auto',
       temperature: 0.3,
-      max_tokens: 1024,  // Capped to stay within 30k TPM free-tier budget
+      max_tokens: 800,  // Lower = fewer tokens per call = stays under 6k TPM
     })
 
     const choice = response.choices[0]

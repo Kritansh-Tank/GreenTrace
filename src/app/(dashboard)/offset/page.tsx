@@ -98,7 +98,7 @@ export default function OffsetPage() {
           id="stripe-checkout-btn"
           onClick={handleCheckout}
           disabled={loading || finalAmount < 1}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Heart className="w-4 h-4" />}
           {loading ? 'Redirecting to Stripe...' : `Donate $${finalAmount} with Stripe`}

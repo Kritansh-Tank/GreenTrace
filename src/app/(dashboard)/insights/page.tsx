@@ -180,6 +180,8 @@ export default function InsightsPage() {
   const [totalSaving, setTotalSaving] = useState(0)
   const [loading, setLoading] = useState(false)
   const [hasData, setHasData] = useState(false)
+  const [allEntries, setAllEntries] = useState<FootprintEntry[]>([])        // all saved calculations
+  const [selectedEntry, setSelectedEntry] = useState<FootprintEntry | null>(null) // currently analysed
   const [latestEntry, setLatestEntry] = useState<FootprintEntry | null>(null)
   const [activeTab, setActiveTab] = useState<'tips' | 'plan' | 'trace'>('tips')
 
@@ -188,14 +190,22 @@ export default function InsightsPage() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
+  // Prevents React StrictMode from firing the effect twice in dev,
+  // which would trigger two agent API calls and cause flickering results.
+  const hasFetched = useRef(false)
 
   useEffect(() => {
+    if (hasFetched.current) return
+    hasFetched.current = true
+
     fetch('/api/history').then(r => r.json()).then(d => {
       const entries: FootprintEntry[] = d.entries ?? []
       if (entries.length > 0) {
         setHasData(true)
+        setAllEntries(entries)
         const latest = entries[entries.length - 1]
         setLatestEntry(latest)
+        setSelectedEntry(latest)
         generateInsights(latest)
       }
     })
@@ -214,9 +224,17 @@ export default function InsightsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          entry_id:  entry.id,
           breakdown: entry,
           goal_kg:   goalKg,
-          form_data: {},
+          // Pass key fields so EcoAgent domain tools get realistic arguments.
+          // The entry stores the pre-computed kg values; we infer mode hints
+          // from which categories are highest so the agent calls the right tools.
+          form_data: {
+            commute_mode:    entry.commute_kg  > 50  ? 'car_petrol' : 'public_transport',
+            km_per_day:      entry.commute_kg  > 0   ? Math.round(entry.commute_kg / 0.21 / 22) : 15,
+            electricity_kwh: entry.energy_kg   > 0   ? Math.round(entry.energy_kg  / 0.82)       : 200,
+          },
         }),
       })
       const data = await res.json()
@@ -260,7 +278,7 @@ export default function InsightsPage() {
       const res = await fetch('/api/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ breakdown: latestEntry, goal_kg: goalKg, question: q }),
+        body: JSON.stringify({ breakdown: selectedEntry ?? latestEntry, goal_kg: goalKg, question: q }),
       })
       const data = await res.json()
       setChat(prev => [...prev, { role: 'ai', text: data.reply ?? 'No response.' }])
@@ -304,16 +322,56 @@ export default function InsightsPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">AI Insights</h1>
           <p className="text-slate-500 text-sm mt-1">Powered by EcoAgent · Groq Llama 3.1 8B · ReAct loop</p>
         </div>
-        {totalSaving > 0 && (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 text-sm text-emerald-700 font-medium shrink-0">
-            💚 Up to <strong>{totalSaving.toFixed(1)} kg/month</strong> possible savings
-          </div>
-        )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
+          {/* Entry info — dropdown if multiple, plain badge if single */}
+          {selectedEntry && (
+            allEntries.length > 1 ? (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500 whitespace-nowrap">Analyse entry:</label>
+                <select
+                  id="entry-selector"
+                  className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                  value={selectedEntry?.id ?? ''}
+                  onChange={e => {
+                    const entry = allEntries.find(en => en.id === e.target.value)
+                    if (entry && entry.id !== selectedEntry?.id) {
+                      setSelectedEntry(entry)
+                      setLatestEntry(entry)
+                      setTips([])
+                      setActionPlan([])
+                      setTrace([])
+                      setSummary('')
+                      setTotalSaving(0)
+                      setActiveTab('tips')
+                      generateInsights(entry)
+                    }
+                  }}
+                >
+                  {[...allEntries].reverse().map(en => (
+                    <option key={en.id} value={en.id}>
+                      {new Date(en.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} — {Number(en.total_kg).toFixed(0)} kg
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+                📅 {new Date(selectedEntry.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <span className="ml-2 font-semibold text-slate-700">{Number(selectedEntry.total_kg).toFixed(0)} kg CO₂</span>
+              </div>
+            )
+          )}
+          {totalSaving > 0 && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 text-sm text-emerald-700 font-medium">
+              💚 Up to <strong>{totalSaving.toFixed(1)} kg/month</strong> possible savings
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary banner */}

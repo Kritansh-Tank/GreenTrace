@@ -1,5 +1,5 @@
 -- ============================================================
--- CarbonSense Database Schema
+-- GreenTrace Database Schema
 -- Run this in Supabase SQL Editor (Dashboard > SQL Editor > New Query)
 -- ============================================================
 
@@ -103,3 +103,31 @@ CREATE POLICY "Users can insert own badges" ON user_badges FOR INSERT WITH CHECK
 
 -- Offsets
 CREATE POLICY "Users can view own offsets" ON carbon_offsets FOR SELECT USING (auth.uid() = user_id);
+
+-- ============================================================
+-- 7. Insights cache
+-- Stores EcoAgent results per footprint entry so the agent
+-- does not re-run on every page visit for the same entry.
+-- UNIQUE(user_id, entry_id) ensures one cached result per entry.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS insights_cache (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  entry_id   UUID REFERENCES footprint_entries(id) ON DELETE CASCADE NOT NULL,
+  tips                      JSONB    NOT NULL DEFAULT '[]',
+  action_plan               JSONB    NOT NULL DEFAULT '[]',
+  trace                     JSONB    NOT NULL DEFAULT '[]',
+  summary                   TEXT     NOT NULL DEFAULT '',
+  total_potential_saving_kg DECIMAL  NOT NULL DEFAULT 0,
+  iterations                INT      NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, entry_id)
+);
+
+ALTER TABLE insights_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own insights"   ON insights_cache FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own insights" ON insights_cache FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own insights" ON insights_cache FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own insights" ON insights_cache FOR DELETE USING (auth.uid() = user_id);

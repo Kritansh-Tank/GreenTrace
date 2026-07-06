@@ -1,7 +1,46 @@
 # 🌿 GreenTrace
 
 > **AI Agent Platform for Personal Carbon Footprint Reduction**
-> Built for the [Kaggle AI Agents Intensive Capstone 2026](https://www.kaggle.com/competitions/ai-agents-intensive-capstone) — **Agents for Good** track.
+
+---
+
+## User Interface
+
+- Home
+ 
+  ![Home](assets/home.png)
+
+- Register
+ 
+  ![Register](assets/register.png)
+
+- Login
+ 
+  ![Login](assets/login.png)
+
+- Dashboard
+
+  ![Dashboard](assets/dashboard.png)
+
+- Calculator
+
+  ![Calculator](assets/calculator.png)
+
+- Goals
+
+  ![Goals](assets/goals.png)
+
+- Insights
+
+  ![Insights](assets/insights.png)
+
+- Travel
+
+  ![Travel](assets/travel.png)
+
+- Offset
+
+  ![Offset](assets/offset.png)
 
 ---
 
@@ -165,7 +204,7 @@ greentrace/
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/GreenTrace.git
+git clone https://github.com/Kritansh-Tank/GreenTrace.git
 cd GreenTrace
 npm install
 ```
@@ -328,4 +367,4 @@ Use any future expiry, any 3-digit CVC.
 
 ## 📄 License
 
-MIT License — see [LICENSE](./LICENSE.md)
+MIT License - See [LICENSE](./LICENSE.md) file for details

@@ -22,17 +22,27 @@ export default function RegisterPage() {
     setLoading(true); setError('')
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } })
     if (error) { setError(error.message); setLoading(false) }
-    else if (data.user && !data.session) { setSuccess(true); setLoading(false) }
-    else { router.push('/dashboard'); router.refresh() }
+    else {
+      // Supabase auto-creates a session when email confirmation is disabled.
+      // Sign out immediately so the user must explicitly log in — prevents the
+      // middleware from seeing a live session and skipping the login page.
+      await supabase.auth.signOut()
+      setSuccess(true)
+      setLoading(false)
+    }
   }
 
   if (success) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center max-w-md w-full shadow-sm">
         <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
-        <p className="text-gray-500 mb-6 text-sm">We sent a confirmation to <strong className="text-gray-800">{email}</strong></p>
-        <Link href="/login" className="text-green-600 font-semibold text-sm hover:text-green-700">← Back to Sign In</Link>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Account created!</h2>
+        <p className="text-gray-500 mb-6 text-sm">
+          Welcome to GreenTrace. You can now sign in and start tracking your carbon footprint.
+        </p>
+        <Link href="/login" className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+          Go to Sign In <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     </div>
   )

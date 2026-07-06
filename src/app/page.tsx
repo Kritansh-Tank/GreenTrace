@@ -98,7 +98,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map(s => (
-              <div key={s.label} className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center">
+              <div key={s.label} className="bg-gray-100 border border-gray-200 rounded-2xl p-6 text-center">
                 <div className="text-4xl font-bold text-gray-900 mb-2">{s.value}</div>
                 <div className="text-sm text-gray-500 leading-snug">{s.label}</div>
               </div>
@@ -182,8 +182,8 @@ export default function LandingPage() {
               ].map((m, i) => (
                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-white/8 text-gray-300 border border-white/10'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white/8 text-gray-300 border border-white/10'
                     }`}>
                     {m.text}
                   </div>
@@ -229,7 +229,7 @@ export default function LandingPage() {
                 Every journey,<br />a greener choice
               </h2>
               <p className="text-gray-500 text-lg leading-relaxed mb-8">
-                CarbonSense fetches live route data and instantly shows you the CO₂ cost of every transport mode — so you choose consciously.
+                GreenTrace fetches live route data and instantly shows you the CO₂ cost of every transport mode — so you choose consciously.
               </p>
               <Link href="/register" className="btn-pill">
                 Plan a route

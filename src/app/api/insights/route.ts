@@ -1,17 +1,20 @@
 /**
  * GreenTrace Insights API — EcoAgent Endpoint
  * ---------------------------------------------
- * Replaces the old single-LLM-call with a full ReAct agent run.
- *
  * POST /api/insights
- *   Body: { breakdown, goal_kg, question?, form_data? }
- *   - Without `question`: runs the full agent loop → returns { tips, action_plan, trace }
- *   - With `question`:    runs a lightweight chat turn  → returns { reply }
+ *   Body: { breakdown, goal_kg, entry_id?, question?, form_data? }
+ *
+ * Flow (agent mode):
+ *   1. Check insights_cache for this (user_id, entry_id)
+ *   2. Cache HIT  → return stored result instantly (no agent call)
+ *   3. Cache MISS → run full ReAct agent → store in insights_cache → return
+ *
+ * Flow (chat mode):
+ *   - `question` present → lightweight single-turn response (never cached)
  *
  * Security:
  *   - Requires authenticated Supabase session (401 if not logged in)
- *   - Input is validated before being passed to the agent
- *   - No user data is logged to external services
+ *   - RLS on insights_cache ensures users only read/write their own rows
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -21,7 +24,7 @@ import type { CO2Breakdown } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
-    // ── Auth guard — only authenticated users may invoke the agent ────────────
+    // ── Auth guard ────────────────────────────────────────────────────────────
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -37,19 +40,66 @@ export async function POST(req: NextRequest) {
       commute_kg:  Number(body.breakdown?.commute_kg  ?? 0),
       total_kg:    Number(body.breakdown?.total_kg    ?? 0),
     }
-    const goalKg    = Number(body.goal_kg ?? 0)
-    const question  = typeof body.question === 'string' ? body.question.trim() : null
-    // form_data carries the raw calculator inputs (used by transport/food tools)
-    const formData  = (body.form_data as Record<string, unknown>) ?? {}
+    const goalKg   = Number(body.goal_kg ?? 0)
+    const entryId  = typeof body.entry_id === 'string' ? body.entry_id : null
+    const question = typeof body.question === 'string' ? body.question.trim() : null
+    const formData = (body.form_data as Record<string, unknown>) ?? {}
 
-    // ── Chat mode: lightweight single-turn response ───────────────────────────
+    // ── Chat mode: lightweight single-turn, never cached ─────────────────────
     if (question) {
       const reply = await runEcoAgentChat(question, breakdown, goalKg)
       return NextResponse.json({ reply })
     }
 
-    // ── Agent mode: full ReAct loop → tips + action plan + trace ─────────────
+    // ── Cache check: return instantly if we already have results ──────────────
+    if (entryId) {
+      const { data: cached } = await supabase
+        .from('insights_cache')
+        .select('tips, action_plan, trace, summary, total_potential_saving_kg, iterations')
+        .eq('user_id', user.id)
+        .eq('entry_id', entryId)
+        .maybeSingle()
+
+      if (cached) {
+        console.log(`[EcoAgent] Cache HIT for entry ${entryId} — skipping agent run`)
+        return NextResponse.json({
+          tips:                      cached.tips,
+          action_plan:               cached.action_plan,
+          trace:                     cached.trace,
+          total_potential_saving_kg: cached.total_potential_saving_kg,
+          summary:                   cached.summary,
+          iterations:                cached.iterations,
+          cached:                    true,
+        })
+      }
+    }
+
+    // ── Agent mode: full ReAct loop ───────────────────────────────────────────
+    console.log(`[EcoAgent] Cache MISS — running agent for entry ${entryId ?? 'unknown'}`)
     const result = await runEcoAgent(breakdown, formData, goalKg)
+
+    // ── Store result in cache (upsert in case of race conditions) ─────────────
+    if (entryId) {
+      const { error: cacheErr } = await supabase
+        .from('insights_cache')
+        .upsert({
+          user_id:                   user.id,
+          entry_id:                  entryId,
+          tips:                      result.tips,
+          action_plan:               result.action_plan,
+          trace:                     result.trace,
+          summary:                   result.summary,
+          total_potential_saving_kg: result.total_potential_saving_kg,
+          iterations:                result.iterations,
+        }, { onConflict: 'user_id,entry_id' })
+
+      if (cacheErr) {
+        // Non-fatal — log but don't fail the request
+        console.warn('[EcoAgent] Cache write failed:', cacheErr.message)
+      } else {
+        console.log(`[EcoAgent] Cached result for entry ${entryId}`)
+      }
+    }
 
     return NextResponse.json({
       tips:                      result.tips,
@@ -58,6 +108,7 @@ export async function POST(req: NextRequest) {
       total_potential_saving_kg: result.total_potential_saving_kg,
       summary:                   result.summary,
       iterations:                result.iterations,
+      cached:                    false,
     })
 
   } catch (e: unknown) {
